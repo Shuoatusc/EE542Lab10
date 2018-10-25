@@ -48,7 +48,7 @@ def retrieveFileMeta(file_ids,outputfile):
         "fields": fields,
         "format": "TSV",
         "pretty": "true",
-        "size": 1000
+        "size": 11470
     }
     # print (params)
     #print (filters)
@@ -89,7 +89,7 @@ def retrieveCaseMeta(file_ids,outputfile):
         "expand" : "diagnoses,demographic,exposures",
         "format": "TSV",
         "pretty": "true",
-        "size": 1000
+        "size": 11470
     }
     # print (params)
     #print (filters)
@@ -117,7 +117,7 @@ def genCasePayload(file_ids,payloadfile):
         },
         "format":"TSV",
         "expand" : "diagnoses,demographic,exposures",
-        "size": "1000",
+        "size": "11470",
         "pretty": "true"
     }
     json_str = json.dumps(filters)
@@ -143,7 +143,7 @@ def genFilePayload(file_ids,payloadfile):
         "format":"TSV",
         "fields":"file_id,file_name,cases.submitter_id,cases.case_id,data_category,data_type,cases.samples.tumor_descriptor,cases.samples.tissue_type,cases.samples.sample_type,cases.samples.submitter_id,cases.samples.sample_id,cases.samples.portions.analytes.aliquots.aliquot_id,cases.samples.portions.analytes.aliquots.submitter_id",
         "pretty":"true",
-        "size": "1000"
+        "size": "11470"
     }
     json_str = json.dumps(filters)
     fd.write(json_str)
@@ -166,7 +166,7 @@ def curlCaseMeta(case_ids,payloadfile,outputfile):
 
 if __name__ == '__main__':
 
-    data_dir = "/Users/yueshi/Downloads/project/data/"
+    data_dir = "/Users/RyanLiu/Projects/lab10/xxx/" 
     filename = data_dir+"file_case_id_DNA.csv"
     
     

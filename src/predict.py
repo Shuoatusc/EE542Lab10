@@ -15,7 +15,23 @@ from sklearn.linear_model import Lasso
 from sklearn.model_selection import KFold
 from sklearn.model_selection import GridSearchCV
 
+from sklearn.preprocessing import LabelEncoder
+from sklearn.svm import SVC 
+from sklearn.metrics import precision_recall_fscore_support as score
+
+from sklearn.metrics import roc_curve, auc
+from sklearn.preprocessing import label_binarize
+from sklearn.ensemble import RandomForestClassifier
+from scipy import interp
+from itertools import cycle
+import matplotlib.pyplot as plt
+from sklearn.metrics import classification_report
+
+from sklearn.decomposition import PCA # Principal Component Analysis module
+from sklearn.manifold import TSNE # TSNE module
+
 from utils import logger
+
 #def lassoSelection(X,y,)
 
 def lassoSelection(X_train, y_train, n):
@@ -82,17 +98,41 @@ def model_fit_predict(X_train,X_test,y_train,y_test):
 		clf = GridSearchCV(models[key], tuned_parameters[key], scoring=None,  refit=True, cv=10)
 		clf.fit(X_train,y_train)
 		y_test_predict = clf.predict(X_test)
-		precision = precision_score(y_test, y_test_predict)
-		accuracy = accuracy_score(y_test, y_test_predict)
-		f1 = f1_score(y_test, y_test_predict)
-		recall = recall_score(y_test, y_test_predict)
-		specificity = specificity_score(y_test, y_test_predict)
-		scores[key] = [precision,accuracy,f1,recall,specificity]
-	#print(scores)
-	return scores
+		#precision = precision_score(y_test, y_test_predict)
+		#accuracy = accuracy_score(y_test, y_test_predict)
+		#f1 = f1_score(y_test, y_test_predict)
+		#recall = recall_score(y_test, y_test_predict)
+		#specificity = specificity_score(y_test, y_test_predict)
+		#scores[key] = [precision,accuracy,f1,recall,specificity]
+		#print(scores)
+		#return scores
 
+def graph(numlabels, features):
 
+	# Invoke the PCA method. Since this is a binary classification problem
+	# let's call n_components = 2
+	pca = PCA(n_components=2)
+	pca_2d = pca.fit_transform(features)
 
+	# Invoke the TSNE method
+	tsne = TSNE(n_components=2, verbose=1, perplexity=40, n_iter=2000)
+	tsne_results = tsne.fit_transform(features)
+
+	# Plot the TSNE and PCA visuals side-by-side
+	plt.figure(figsize = (16,11))
+	plt.subplot(121)
+	plt.scatter(pca_2d[:,0],pca_2d[:,1], c = numlabels, 
+		    cmap = "coolwarm", edgecolor = "None", alpha=0.35)
+	plt.colorbar()
+	plt.title('PCA Scatter Plot')
+	plt.subplot(122)
+	plt.scatter(tsne_results[:,0],tsne_results[:,1],  c = numlabels, 
+		    cmap = "coolwarm", edgecolor = "None", alpha=0.35)
+	plt.colorbar()
+	plt.title('TSNE Scatter Plot')
+	plt.show()
+
+	
 def draw(scores):
 	'''
 	draw scores.
@@ -133,22 +173,50 @@ def draw(scores):
 if __name__ == '__main__':
 
 
-	data_dir ="/Users/yueshi/Downloads/project/data/"
+	data_dir ="/Users/RyanLiu/Projects/lab10/EE542Lab10/"
 
 	data_file = data_dir + "miRNA_matrix.csv"
 
-	df = pd.read_csv(data_file)
-	# print(df)
-	y_data = df.pop('label').values
 
+	#read file and remove file_id field
+	df = pd.read_csv(data_file)
 	df.pop('file_id')
 
-	columns =df.columns
-	#print (columns)
-	X_data = df.values
-	
+	labels = df['label']
+	y_data = labels
+
+	#convert labels into numbers and remove label field
+	df['label'] = df['label'].factorize()[0]
+	numlabels = df['label']
+	df.pop('label')
+
+	print ("label converted into numbers in the order of following columns from 0 to X:")
+	#print (numlabels)
+
+	# Turn dataframe into arrays (X value)
+	features = df.values 
+
+
+	#check the features and labels
+	#print(features)
+	#print()
+	#print(labels)
+
+
 	# split the data to train and test set
-	X_train, X_test, y_train, y_test = train_test_split(X_data, y_data, test_size=0.3, random_state=0)
+	X_train, X_test, y_train, y_test = train_test_split(features, numlabels, test_size=0.3, random_state=0)
+	
+	#standardize the data.
+	scaler = StandardScaler()
+	scaler.fit(X_train)
+	X_train = scaler.transform(X_train)
+	X_test = scaler.transform(X_test)
+
+	#check the training,test set shape
+	print("X_train shape: {}".format(X_train.shape))
+	print("X_test shape: {}".format(X_test.shape))
+	print("y_train shape: {}".format(y_train.shape))
+	print("y_test shape: {}".format(y_test.shape))
 	
 
 	#standardize the data.
@@ -157,18 +225,43 @@ if __name__ == '__main__':
 	X_train = scaler.transform(X_train)
 	X_test = scaler.transform(X_test)
 
-	# check the distribution of tumor and normal sampels in traing and test data set.
-	logger.info("Percentage of tumor cases in training set is {}".format(sum(y_train)/len(y_train)))
-	logger.info("Percentage of tumor cases in test set is {}".format(sum(y_test)/len(y_test)))
+#   	#Training SVM model
+#	svm_model_linear = SVC(kernel = 'linear', C = 1).fit(X_train, y_train)
+#   	#Use model to predict
+#	svm_predictions = svm_model_linear.predict(X_test) 
+ 
+#	precision, recall, fscore, support = score(y_test, svm_predictions)
+#	print('precision: {}'.format(precision))
+#	print('recall: {}'.format(recall))
+#	print('fscore: {}'.format(fscore))
+#	print('support: {}'.format(support))
+
 	
-	n = 7
+	n = 55
 	feaures_columns = lassoSelection(X_train, y_train, n)
 
+	print("these are feature headers:")
+	print(np.unique(labels))
+	n_classes = len(np.unique(labels)) - 1
+
+	#visualization
+	#graph(numlabels, features[:,feaures_columns])
+
+	classifier = RandomForestClassifier(n_estimators = 10, criterion = 'entropy', random_state = 42)
+	y_score = classifier.fit(X_train[:,feaures_columns], y_train)
+
+	print(classification_report(y_train, classifier.predict(X_train[:,feaures_columns])))
+
+	# Compute ROC curve and ROC area for each class
 
 
-	scores = model_fit_predict(X_train[:,feaures_columns],X_test[:,feaures_columns],y_train,y_test)
 
-	draw(scores)
+
+
+
+	#scores = model_fit_predict(X_train[:,feaures_columns],X_test[:,feaures_columns],y_train,y_test)
+	#draw(scores)
+
 	#lasso cross validation
 	# lassoreg = Lasso(random_state=0)
 	# alphas = np.logspace(-4, -0.5, 30)
@@ -176,12 +269,4 @@ if __name__ == '__main__':
 	# n_fold = 10
 	# clf = GridSearchCV(lassoreg,tuned_parameters,cv=10, refit = False)
 	# clf.fit(X_train,y_train)
-
-
-
-
- 
-
-
-
 
